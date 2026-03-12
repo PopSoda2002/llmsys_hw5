@@ -120,12 +120,14 @@ def generate(model, examples, src_key, tgt_key, tokenizer, model_max_length, dev
 
     return gen_sents
 
-def train(model, optimizer, examples, batch_size, collate_fn, desc, rank=0, average_gradients_fn=None):
+def train(model, optimizer, examples, batch_size, collate_fn, desc, rank=0, average_gradients_fn=None, max_batches=0):
     model.train()
     
     tokens_per_sec = []
     tokens_num = []
     for i, batch in enumerate(prog_bar := tqdm.tqdm(examples, desc=f'Training ({desc})')):
+        if max_batches > 0 and i >= max_batches:
+            break
         t0 = time.time()
         optimizer.zero_grad()
         logits = model(input_ids=batch['input_ids']).logits
@@ -140,9 +142,9 @@ def train(model, optimizer, examples, batch_size, collate_fn, desc, rank=0, aver
         ''' Call the `average_gradients_fn` function to reduce and broadcast the gradients in Data Parallel
             Just few lines of code. Think simply.
         '''
-        # BEGIN SOLUTION
+        # BEGIN_HW5
         raise NotImplementedError("Data Parallel Not Implemented Yet")
-        # END SOLUTION
+        # END_HW5
         optimizer.step()
         batch_time = time.time() - t0
         tokens = np.prod(batch['input_ids'].shape)

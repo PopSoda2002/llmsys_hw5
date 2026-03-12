@@ -14,9 +14,9 @@ class Partition():
     
     def __getitem__(self, index):
         '''Given index, get the data according to the partitioned index'''
-        # BEGIN ASSIGN5_1_1
+        # BEGIN_HW5_1_1
         raise NotImplementedError("Data Parallel Not Implemented Yet")
-        # END ASSIGN5_1_1
+        # END_HW5_1_1
 
 class DataPartitioner():
     def __init__(self, data, sizes=[0.7, 0.2, 0.1], seed=1234):
@@ -28,18 +28,18 @@ class DataPartitioner():
         1. Create indices and use `rng` to shuffle indices
         2. Create different partitions of indices according to `sizes` and store in `self.partitions`
         '''
-        # BEGIN ASSIGN5_1_1
+        # BEGIN_HW5_1_1
         raise NotImplementedError("Data Parallel Not Implemented Yet")
-        # END ASSIGN5_1_1
+        # END_HW5_1_1
 
     def use(self, partition):
         ''' Return a simple dataset class `Partiton` by original data and partitioned indices
 
         Just one line of code. Think it simply.
         '''
-        # BEGIN ASSIGN5_1_1
+        # BEGIN_HW5_1_1
         raise NotImplementedError("Data Parallel Not Implemented Yet")
-        # END ASSIGN5_1_1
+        # END_HW5_1_1
 
 def partition_dataset(rank, world_size, dataset, batch_size=128, collate_fn=None):
     """ Partitioning training dataset of the Machine Translation
@@ -53,6 +53,6 @@ def partition_dataset(rank, world_size, dataset, batch_size=128, collate_fn=None
     3. Get the current partition dataset given `rank`, use the `use` function in DataPartitioner
     4. Wrap the dataset with `DataLoader`, remember to customize the `collate_fn`
     """
-    # BEGIN ASSIGN5_1
+    # BEGIN_HW5_1
     raise NotImplementedError("Data Parallel Not Implemented Yet")
-    # END ASSIGN5_1
+    # END_HW5_1

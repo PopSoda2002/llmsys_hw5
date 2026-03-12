@@ -39,10 +39,10 @@ class GPT2ModelParallel(GPT2ModelCustom):
         You should construct nn.Sequential using GPT2Block modules. Notice that each block returns multiple values but you will only need the hidden states.
         '''
 
-        # BEGIN ASSIGN5_2_3
+        # BEGIN_HW5_2_3
         pipe = None
         raise NotImplementedError("Pipeline Parallel Not Implemented Yet")
-        # END ASSIGN5_2_3
+        # END_HW5_2_3
         self.h_pp = pipe
 
 class GPT2LMHeadModelParallel(GPT2LMHeadModelCustom):

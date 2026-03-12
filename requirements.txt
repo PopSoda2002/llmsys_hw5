@@ -4,3 +4,4 @@ datasets==3.6.0
 embeddings==0.0.8
 transformers==4.37.2
 sacrebleu==2.4.0
+pytest

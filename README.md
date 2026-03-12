@@ -1,6 +1,6 @@
-# Assignment 5: Distributed Training and Parallelism
+# HW5: Distributed Training and Parallelism
 
-The goal of this assignment is to implement distributed training methods, including data parallelism and pipeline parallelism.
+The goal of this HW5 is to implement distributed training methods, including data parallelism and pipeline parallelism.
 
 ## Setting up the code 
 
@@ -13,11 +13,11 @@ pip install -r requirements.txt
 
 ## Setting up the environment 
 
-We strongly suggest you using machines in PSC to complete this homework.
+We strongly suggest using machines in PSC to complete this homework.
 This is the
 [link](https://docs.google.com/document/d/1FzNWon1GePQNCqjx3tiXU-FQtxeBDruvjwORWRHhoVs/edit?usp=sharing)
 to the guide of using PSC. The command to require an interactive node
-with multiple GPUs is as follows. You will need at least two GPUs (n=2) for this assignment.
+with multiple GPUs is as follows. You will need at least two GPUs (n=2) for this HW5.
 
 ``` {.Bash bgcolor="LightGray"}
 # use GPU-shared flag for n <= 4
@@ -28,7 +28,12 @@ srun --partition=GPU-shared --gres=gpu:n --time=1:00:00 --pty bash
 
 Requesting machines needs time, which will be much longer if there are
 lots of people requesting resources at the same time. Please plan your
-time to finish this assignment accordingly.
+time to finish this homework accordingly.
+
+## Implementation Markers
+
+All code regions that students should implement are marked with `BEGIN_HW5_*` and `END_HW5_*` comments.
+Please keep all edits inside those marked blocks.
 
 ## Problem 1: Data Parallel (50) 
 
@@ -221,7 +226,7 @@ collecting the metrics.
 # single node
 python project/run_data_parallel.py --world_size 1 --batch_size 64
 
-# double nodes
+# two GPUs
 python project/run_data_parallel.py --world_size 2 --batch_size 128
 ```
 
@@ -235,7 +240,7 @@ devices and compare them with the `training time` with a single device.
 That is to say, if you have two devices, you calculate the training time
 separately for different devices.
 
-For to, we **sum up** the `tokens_per_second` from multiple devices as
+For throughput, we **sum up** the `tokens_per_second` from multiple devices as
 the throughput and compare the throughput with a single device. The
 throughput should also be **an average number over epochs** because we
 usually repeat the experiments to avoid outliers when collecting
@@ -369,6 +374,8 @@ python project/run_pipeline.py --model_parallel_mode='pipeline_parallel'
 **Please note that** when implementing `_prepare_pipeline_parallel`, you would want to define the `nn.Sequential` module to extract useful values from the returned tuple. `GPT2Block` returns a tuple, not a tensor. 
 You should construct `nn.Sequential` using `GPT2Block` modules. Notice that each block returns multiple values but you will only need the hidden states.
 
+**Hint:** If you add helper modules (like one to extract the first item from a tuple), remember that modules without parameters will return `cpu` from `_retrieve_device()`. Use `WithDevice(module, device)` from `pipeline/partition.py` to ensure such modules stay on the correct device during the split.
+
 To visualize the scaling improvement, please plot **2 figures** of the 2
 performance metrics separately. A sample figure is shown below. Please save the figures in the directory
 `submit_figures`.
@@ -385,3 +392,37 @@ inspect your codes manually to make sure that you follow the
 implementation restrictions on specific packages. We will also compile
 and run your codes to make sure they are runnable and check your figures
 of the performance metrics.
+
+### Create Submission Zip
+
+Use the helper script below to package required files for submission:
+
+```bash
+bash scripts/create_submission_zip.sh
+```
+
+This creates a zip in `dist/` and excludes transient artifacts (e.g., `.venv`, `workdir`, caches).
+
+### Benchmarking (Students + Grader)
+
+Use the benchmark runner to generate performance logs, summary JSON, and plots:
+
+```bash
+python scripts/run_benchmarks.py --mode student
+```
+
+To run in grader mode with threshold checks:
+
+```bash
+python scripts/run_benchmarks.py --mode grader \
+    --dp-time-threshold 1.2 \
+    --dp-throughput-threshold 1.5 \
+    --pp-time-threshold 1.0 \
+    --pp-throughput-threshold 1.0
+```
+
+Outputs are written to:
+
+- `workdir/perf/` (raw logs)
+- `submit_figures/performance_summary.json`
+- `submit_figures/*.png`

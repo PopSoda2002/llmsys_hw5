@@ -34,7 +34,9 @@ def run_pp(
     n_chunk = 4, # the number of microbatches for pipeline parallelism
     learning_rate=1e-4,
     device='cuda',
-    model_parallel_mode=None):
+    model_parallel_mode=None,
+    benchmark_only=False,
+    max_batches=0):
     workdir = f'./workdir'
     os.makedirs(workdir, exist_ok=True)
 
@@ -104,7 +106,8 @@ def run_pp(
             examples=train_loader,
             batch_size=batch_size,
             collate_fn=collate_fn,
-            desc=desc)
+            desc=desc,
+            max_batches=max_batches)
         end = time.time()
         avg_tokens_per_sec = sum(token_nums) / (end - start)
 
@@ -114,38 +117,39 @@ def run_pp(
             total_time.append(training_time)
             total_tokens_per_sec.append(avg_tokens_per_sec)
 
-            validation_loss = evaluate_loss(
-                model=model,
-                examples=val_loader,
-                batch_size=batch_size,
-                collate_fn=collate_fn,
-                desc=desc)
+            if not benchmark_only:
+                validation_loss = evaluate_loss(
+                    model=model,
+                    examples=val_loader,
+                    batch_size=batch_size,
+                    collate_fn=collate_fn,
+                    desc=desc)
 
-            print(f'Epoch {epoch_idx}: Validation Loss = {validation_loss}')
+                print(f'Epoch {epoch_idx}: Validation Loss = {validation_loss}')
 
-            gen_sents = generate(
-                model=model,
-                examples=dataset['test'],
-                src_key=src_key,
-                tgt_key=tgt_key,
-                tokenizer=tokenizer,
-                model_max_length=model_max_length,
-                device=first_device,
-                desc=desc)
+                gen_sents = generate(
+                    model=model,
+                    examples=dataset['test'],
+                    src_key=src_key,
+                    tgt_key=tgt_key,
+                    tokenizer=tokenizer,
+                    model_max_length=model_max_length,
+                    device=first_device,
+                    desc=desc)
 
-            gen_examples = []
-            for example, gen_sent in zip(dataset['test'], gen_sents):
-                gen_examples.append({'example': example, 'gen': gen_sent})
-            json.dump(gen_examples, open(
-                f'{workdir}/gen_epoch{epoch_idx}.json', 'w'), indent=4)
+                gen_examples = []
+                for example, gen_sent in zip(dataset['test'], gen_sents):
+                    gen_examples.append({'example': example, 'gen': gen_sent})
+                json.dump(gen_examples, open(
+                    f'{workdir}/gen_epoch{epoch_idx}.json', 'w'), indent=4)
 
-            eval_scores = evaluate_bleu(
-                examples=dataset['test'], gen_sents=gen_sents, tgt_key=tgt_key)
-            print(f'Epoch {epoch_idx}: {eval_scores}')
+                eval_scores = evaluate_bleu(
+                    examples=dataset['test'], gen_sents=gen_sents, tgt_key=tgt_key)
+                print(f'Epoch {epoch_idx}: {eval_scores}')
 
-            json.dump(
-                {'validation_loss': validation_loss, **eval_scores},
-                open(f'{workdir}/eval_results_epoch{epoch_idx}.json', 'w'))
+                json.dump(
+                    {'validation_loss': validation_loss, **eval_scores},
+                    open(f'{workdir}/eval_results_epoch{epoch_idx}.json', 'w'))
         else:
             break
     if not PYTEST:
@@ -165,6 +169,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--model_parallel_mode', type=str, default=None)
+    parser.add_argument('--benchmark_only', action='store_true', help='Run only training benchmarks, skip validation/generation')
+    parser.add_argument('--max_batches', type=int, default=0, help='Max batches per epoch (0=full epoch)')
 
     args = parser.parse_args()
 
@@ -177,5 +183,7 @@ if __name__ == '__main__':
         n_chunk=args.n_chunk,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
-        model_parallel_mode=args.model_parallel_mode
+        model_parallel_mode=args.model_parallel_mode,
+        benchmark_only=args.benchmark_only,
+        max_batches=args.max_batches
     )
