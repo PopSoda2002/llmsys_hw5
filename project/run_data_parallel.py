@@ -26,13 +26,18 @@ PYTEST = False
 
 def average_gradients(model):
     '''Aggregate the gradients from different GPUs
-    
-    1. Iterate through the parameters of the model 
+
+    1. Iterate through the parameters of the model
     2. Use `torch.distributed` package and call the reduce fucntion to aggregate the gradients of all the parameters
     3. Average the gradients over the world_size (total number of devices)
     '''
     # BEGIN_HW5_1_2
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    world_size = dist.get_world_size()
+    for p in model.parameters():
+        if p.grad is None:
+            continue
+        dist.all_reduce(p.grad.data, op=dist.ReduceOp.SUM)
+        p.grad.data /= world_size
     # END_HW5_1_2
 
 def setup(rank, world_size, backend):
@@ -42,7 +47,9 @@ def setup(rank, world_size, backend):
     2. Use `torch.distributed` to init the process group
     '''
     # BEGIN_HW5_1_2
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    os.environ['MASTER_ADDR'] = '127.0.0.1'
+    os.environ['MASTER_PORT'] = '11868'
+    dist.init_process_group(backend=backend, rank=rank, world_size=world_size)
     # END_HW5_1_2
 
 
@@ -197,8 +204,20 @@ if __name__ == '__main__':
     2. You should start the processes to work and terminate resources properly
     '''
     # BEGIN_HW5_1_3
-    world_size = None  # TODO: Define the number of GPUs
-    backend = None  # TODO: Define your backend for communication, we suggest using 'nccl'
+    world_size = args.world_size
+    backend = 'nccl' if torch.cuda.is_available() else 'gloo'
 
-    raise NotImplementedError("Data Parallel Not Implemented Yet")
+    for rank in range(world_size):
+        p = Process(
+            target=run_dp,
+            args=(rank, world_size, backend,
+                  args.dataset, args.model_max_length, args.n_epochs,
+                  args.batch_size, args.learning_rate, args.benchmark_only,
+                  args.max_batches, PYTEST),
+        )
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
     # END_HW5_1_3

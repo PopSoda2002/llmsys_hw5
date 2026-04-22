@@ -143,7 +143,8 @@ def train(model, optimizer, examples, batch_size, collate_fn, desc, rank=0, aver
             Just few lines of code. Think simply.
         '''
         # BEGIN_HW5
-        raise NotImplementedError("Data Parallel Not Implemented Yet")
+        if average_gradients_fn is not None:
+            average_gradients_fn(model)
         # END_HW5
         optimizer.step()
         batch_time = time.time() - t0
