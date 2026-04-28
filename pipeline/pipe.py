@@ -55,11 +55,16 @@ class Pipe(nn.Module):
         2. Generate the clock schedule.
         3. Call self.compute to compute the micro-batches in parallel.
         4. Concatenate the micro-batches to form the mini-batch and return it.
-        
+
         Please note that you should put the result on the last device. Putting the result on the same device as input x will lead to pipeline parallel training failing.
         '''
         # BEGIN_HW5_2_2
-        raise NotImplementedError("Pipeline Parallel Not Implemented Yet")
+        batches = list(x.chunk(self.split_size, dim=0))
+        num_batches = len(batches)
+        num_partitions = len(self.partitions)
+        for schedule in _clock_cycles(num_batches, num_partitions):
+            self.compute(batches, schedule)
+        return torch.cat(batches, dim=0).to(self.devices[-1])
         # END_HW5_2_2
 
     def compute(self, batches, schedule: List[Tuple[int, int]]) -> None:
@@ -67,7 +72,7 @@ class Pipe(nn.Module):
 
         Hint:
         1. Retrieve the partition and microbatch from the schedule.
-        2. Use Task to send the computation to a worker. 
+        2. Use Task to send the computation to a worker.
         3. Use the in_queues and out_queues to send and receive tasks.
         4. Store the result back to the batches.
         '''
@@ -75,6 +80,24 @@ class Pipe(nn.Module):
         devices = self.devices
 
         # BEGIN_HW5_2_2
-        raise NotImplementedError("Pipeline Parallel Not Implemented Yet")
+        # Phase 1: submit all (i, j) tasks in this clock to their workers.
+        for i, j in schedule:
+            batch = batches[i].to(devices[j], non_blocking=True)
+            partition = partitions[j]
+
+            def closure(batch=batch, partition=partition):
+                return partition(batch)
+
+            task = Task(closure)
+            self.in_queues[j].put(task)
+
+        # Phase 2: collect results (one per submitted task on each worker).
+        for i, j in schedule:
+            ok, payload = self.out_queues[j].get()
+            if not ok:
+                exc_info = payload
+                raise exc_info[1].with_traceback(exc_info[2])
+            _task, result = payload
+            batches[i] = result
         # END_HW5_2_2
 
