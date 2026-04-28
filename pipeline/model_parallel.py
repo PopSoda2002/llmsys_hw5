@@ -40,8 +40,18 @@ class GPT2ModelParallel(GPT2ModelCustom):
         '''
 
         # BEGIN_HW5_2_3
-        pipe = None
-        raise NotImplementedError("Pipeline Parallel Not Implemented Yet")
+        self.pipeline_parallel = True
+        # Wrap each GPT2Block with an ExtractFirstItem so the tuple returned by
+        # the block gets reduced to just hidden_states before the next block.
+        # ExtractFirstItem has no parameters, so wrap it with WithDevice to pin
+        # it to the same GPU as the preceding block (otherwise _split_module
+        # would treat it as "cpu" and split incorrectly).
+        modules = []
+        for block in self.h:
+            device = _retrieve_device(block)
+            modules.append(block)
+            modules.append(WithDevice(ExtractFirstItem(), device))
+        pipe = Pipe(nn.Sequential(*modules), split_size=split_size)
         # END_HW5_2_3
         self.h_pp = pipe
 
